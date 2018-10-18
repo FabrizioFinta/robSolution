@@ -14,24 +14,18 @@ public class YourSolution implements Solution {
 
     @Override
     public List<Instruction> solve(Grid grid, int time) {
-
         if (time < 0) throw new IllegalArgumentException();
 
         Coordinate kitchenPos = grid.getKitchen();
         Coordinate currentPosition = grid.getRoom();
 
         List<AdvancedCoordinate> advancedCoordinates = convertGrid(grid, kitchenPos);
-
         Collections.sort(advancedCoordinates, new CompareAdvancedCoordinates());
 
-        List<Instruction> wayToKitchen = goToTheKitchen(currentPosition, kitchenPos, advancedCoordinates, grid, time);
-
-        List<Instruction> wayToKitchenAndBack = wayToKitchen;
-
-        return wayToKitchenAndBack;
+        return findTheRoute(currentPosition, kitchenPos, advancedCoordinates, grid, time);
     }
 
-    private List<Instruction> goToTheKitchen(Coordinate currentPosition, Coordinate kitchenPos, List<AdvancedCoordinate> advancedCoordinates, Grid grid, int currentTime) {
+    private List<Instruction> findTheRoute(Coordinate currentPosition, Coordinate kitchenPos, List<AdvancedCoordinate> advancedCoordinates, Grid grid, int currentTime) {
         List<Instruction> wayToKitchen = new ArrayList<>();
         List<Coordinate> parentTiles = new ArrayList<>();
         Coordinate forbiddenTile;
