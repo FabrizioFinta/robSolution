@@ -62,7 +62,6 @@ public class YourSolution implements Solution {
             }
             currentTime++;
         }
-        System.out.println(wayToKitchen);
         return wayToKitchen;
     }
 
