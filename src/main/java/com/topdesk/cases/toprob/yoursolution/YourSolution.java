@@ -9,6 +9,7 @@ import com.topdesk.cases.toprob.Solution;
 
 public class YourSolution implements Solution {
 
+    private int counter;
     private int bugTime;
     private Grid grid;
 
@@ -24,17 +25,23 @@ public class YourSolution implements Solution {
     public List<Instruction> solve(Grid grid, int time) {
         if (time < 0) throw new IllegalArgumentException();
 
-        setBugTime(time+1);
-        setGrid(grid);
-        setKitchenPos(grid.getKitchen());
-        setRoomPos(grid.getRoom());
-        setCurrentPosition(roomPos);
+        if (counter > 0) {
+            YourSolution copy = new YourSolution();
+            return copy.solve(grid, time);
+        } else {
+            setBugTime(time + 1);
+            setGrid(grid);
+            setKitchenPos(grid.getKitchen());
+            setRoomPos(grid.getRoom());
+            setCurrentPosition(roomPos);
 
-        advancedCoordinates = convertGrid();
+            advancedCoordinates = convertGrid();
 
-        findTheRoute();
+            findTheRoute();
 
-        return route;
+            counter ++;
+            return route;
+        }
     }
 
 
