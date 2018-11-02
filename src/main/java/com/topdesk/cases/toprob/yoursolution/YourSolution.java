@@ -1,9 +1,6 @@
 package com.topdesk.cases.toprob.yoursolution;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import com.topdesk.cases.toprob.Coordinate;
 import com.topdesk.cases.toprob.Grid;
@@ -12,7 +9,7 @@ import com.topdesk.cases.toprob.Solution;
 
 public class YourSolution implements Solution {
 
-    private int currentTime;
+    private int bugTime;
     private Grid grid;
 
     private Coordinate currentPosition;
@@ -20,158 +17,159 @@ public class YourSolution implements Solution {
     private Coordinate roomPos;
     private Coordinate forbiddenTile;
 
-    private List<Coordinate> parentTiles = new ArrayList<>();
+    private List<AdvancedCoordinate> advancedCoordinates;
     private List<Instruction> route = new ArrayList<>();
 
     @Override
     public List<Instruction> solve(Grid grid, int time) {
         if (time < 0) throw new IllegalArgumentException();
 
+        setBugTime(time+1);
         setGrid(grid);
-        setCurrentTime(time);
         setKitchenPos(grid.getKitchen());
         setRoomPos(grid.getRoom());
         setCurrentPosition(roomPos);
 
-        List<AdvancedCoordinate> advancedCoordinates = convertGrid();
-        advancedCoordinates.sort(new CompareAdvancedCoordinates());
+        advancedCoordinates = convertGrid();
 
-        findTheRoute(advancedCoordinates);
+        findTheRoute();
 
         return route;
     }
 
-    private void findTheRoute(List<AdvancedCoordinate> advancedCoordinates) {
-        goToKitchen(advancedCoordinates);
+
+    private void findTheRoute() {
+        AStarCalculation aStarCalculation = new AStarCalculation(advancedCoordinates, roomPos, kitchenPos);
+        aStarCalculation.aStarCalculate();
+
+        List<AdvancedCoordinate> parentTiles = aStarCalculation.getRoute();
+
+        goToKitchen(parentTiles);
         stopAtTheKitchen();
         goToRoom(parentTiles);
     }
 
-    private void goToKitchen(List<AdvancedCoordinate> advancedCoordinates) {
-        while (!currentPosition.equals(kitchenPos)) {
-            setForbiddenTile(grid.getBug(currentTime+1));
-            List<AdvancedCoordinate> stepList = sortTheTiles(advancedCoordinates);
-            Coordinate simplestTile = stepList.get(0).getCoordinate();
-            addRoute(decideWhereToMove(simplestTile));
-            if (route.iterator().hasNext() && route.get(route.size()-1) != Instruction.PAUSE) parentTiles.add(currentPosition);
-            currentTime++;
-        }
-    }
-
-    private void goToRoom(List<Coordinate> parentTiles) {
-        Collections.reverse(parentTiles);
-        parentTiles.add(grid.getRoom());
-        if (parentTiles.size() > 1) parentTiles.remove(0);
-        while (!currentPosition.equals(roomPos)){
-            setForbiddenTile(grid.getBug(currentTime+1));
-            Coordinate previousMove = parentTiles.get(0);
-            route.add(decideWhereToMove(previousMove));
-            if (!previousMove.equals(forbiddenTile)) parentTiles.remove(previousMove);
-            currentTime++;
-        }
-    }
-
-    private List<AdvancedCoordinate> sortTheTiles(List<AdvancedCoordinate> advancedCoordinates) {
-        List<AdvancedCoordinate> stepList = new ArrayList<>();
-        for (AdvancedCoordinate examined : advancedCoordinates) {
-            if (isAdjacentTile(examined)) {
-                stepList.add(examined);
+    private void goToKitchen(List<AdvancedCoordinate> parentTiles) {
+        int loopCount = 1;
+        while (!amIInTheKitchen(currentPosition)) {
+            setForbiddenTile(grid.getBug(bugTime));
+            if (addRoute(decideWhereToMove(parentTiles.get(loopCount).getCoordinate()))) {
+                loopCount++;
             }
+            bugTime++;
         }
-        return stepList;
+    }
+
+    private void goToRoom(List<AdvancedCoordinate> parentTiles) {
+        Collections.reverse(parentTiles);
+        parentTiles.remove(0);
+        while (!amIInTheRoom(currentPosition)) {
+            setForbiddenTile(grid.getBug(bugTime));
+            Coordinate previousMove = parentTiles.get(0).getCoordinate();
+            if (addRoute(decideWhereToMove(previousMove))) {
+                parentTiles.remove(0);
+            }
+            bugTime++;
+        }
     }
 
     private void stopAtTheKitchen() {
         for (int i = 0; i < 5; i++) {
             addRoute(move("p", currentPosition));
         }
-        currentTime += 5;
+        bugTime += 5;
     }
 
-    private Instruction decideWhereToMove(Coordinate simplestTile) {
-        if (!forbiddenTile.equals(simplestTile)) {
-            if (isTheTileEast(simplestTile)) {
-                setCurrentPosition(simplestTile);
-                return move("e", simplestTile);
-            } else if (isTheTileWest(simplestTile)) {
-                setCurrentPosition(simplestTile);
-                return move("w", simplestTile);
-            } else if (isTheTileSouth(simplestTile)) {
-                setCurrentPosition(simplestTile);
-                return move("s", simplestTile);
-            } else {
-                setCurrentPosition(simplestTile);
-                return move("n", simplestTile);
-            }
+    private Instruction decideWhereToMove(Coordinate targetTile) {
+        if (forbiddenTile.equals(targetTile)) {
+            return move("p", targetTile);
         } else {
-            return move("p", simplestTile);
+            if (isTheTileEast(targetTile)) {
+                currentPosition = targetTile;
+                return move("e", targetTile);
+            } else if (isTheTileWest(targetTile)) {
+                currentPosition = targetTile;
+                return move("w", targetTile);
+            } else if (isTheTileSouth(targetTile)) {
+                currentPosition = targetTile;
+                return move("s", targetTile);
+            } else {
+                currentPosition = targetTile;
+                return move("n", targetTile);
+            }
         }
     }
 
-    private boolean isTheTileSouth(Coordinate simplestTile) {
-        return simplestTile.getY() > currentPosition.getY();
+    private boolean isTheTileSouth(Coordinate targetTile) {
+        return targetTile.getY() > currentPosition.getY();
     }
 
-    private boolean isTheTileWest(Coordinate simplestTile) {
-        return simplestTile.getX() < currentPosition.getX();
+    private boolean isTheTileWest(Coordinate targetTile) {
+        return targetTile.getX() < currentPosition.getX();
     }
 
-    private boolean isTheTileEast(Coordinate simplestTile) {
-        return simplestTile.getX() > currentPosition.getX();
+    private boolean isTheTileEast(Coordinate targetTile) {
+        return targetTile.getX() > currentPosition.getX();
     }
 
-    private Instruction move(String e, Coordinate simplestTile) {
-        switch (e){
-            case "e" :
-                Instruction.EAST.execute(simplestTile);
+    private Instruction move(String e, Coordinate targetTile) {
+        switch (e) {
+            case "e":
+                Instruction.EAST.execute(targetTile);
                 return Instruction.EAST;
-            case "w" :
+            case "w":
+                Instruction.WEST.execute(targetTile);
                 return Instruction.WEST;
-            case "n" :
-                Instruction.NORTH.execute(simplestTile);
+            case "n":
+                Instruction.NORTH.execute(targetTile);
                 return Instruction.NORTH;
-            case "s" :
-                Instruction.SOUTH.execute(simplestTile);
+            case "s":
+                Instruction.SOUTH.execute(targetTile);
                 return Instruction.SOUTH;
-            default :
+            default:
                 Instruction.PAUSE.execute(currentPosition);
                 return Instruction.PAUSE;
         }
     }
 
-    private boolean isAdjacentTile(AdvancedCoordinate examined) {
-        boolean examination = (currentPosition != examined.getCoordinate() &&
-                (currentPosition.getX() == examined.getX() ^ currentPosition.getY() == examined.getY())) &&
-                (currentPosition.getX()-1 == examined.getX() || currentPosition.getX()+1 == examined.getX()) ^
-                (currentPosition.getY()-1 == examined.getY() || currentPosition.getY()+1 == examined.getY());
-        return examination;
+    private boolean amIInTheKitchen(Coordinate currentPosition) {
+        return currentPosition.equals(kitchenPos);
+    }
+
+    private boolean amIInTheRoom(Coordinate currentPosition) {
+        return currentPosition.equals(roomPos);
     }
 
     private List<AdvancedCoordinate> convertGrid() {
         List<AdvancedCoordinate> advancedCoordinates = new ArrayList<>();
-        Set <Coordinate> forbiddenCoordinates = grid.getHoles();
+        Set<Coordinate> forbiddenCoordinates = grid.getHoles();
         for (int i = 0; i < grid.getHeight(); i++) {
             for (int j = 0; j < grid.getWidth(); j++) {
                 Coordinate coordinate = new Coordinate(j, i);
-                if (!forbiddenCoordinates.contains(coordinate)) {
-                    AdvancedCoordinate coord = new AdvancedCoordinate(kitchenPos, coordinate);
-                    advancedCoordinates.add(coord);
+                if (!forbiddenCoordinates.contains(coordinate) && !coordinate.equals(currentPosition)) {
+                    AdvancedCoordinate tile = new AdvancedCoordinate(kitchenPos, coordinate);
+                    advancedCoordinates.add(tile);
                 }
             }
         }
         return advancedCoordinates;
     }
 
-    private void addRoute(Instruction direction) {
+    private boolean addRoute(Instruction direction) {
         this.route.add(direction);
+        if (direction == Instruction.PAUSE) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     private void setCurrentPosition(Coordinate currentPosition) {
         this.currentPosition = currentPosition;
     }
 
-    private void setCurrentTime(int currentTime) {
-        this.currentTime = currentTime;
+    private void setBugTime(int bugTime) {
+        this.bugTime = bugTime;
     }
 
     private void setKitchenPos(Coordinate kitchenPos) {

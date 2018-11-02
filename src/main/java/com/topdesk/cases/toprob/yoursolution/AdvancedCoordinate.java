@@ -9,30 +9,75 @@ public class AdvancedCoordinate {
     private Integer gValue;
     private Integer fValue;
     private Coordinate coordinate;
+    private AdvancedCoordinate parent;
 
-    public AdvancedCoordinate(Coordinate kitchen, Coordinate tile) {
+
+    AdvancedCoordinate(Coordinate kitchen, Coordinate tile) {
+        this.gValue = 0;
         this.hValue = Math.abs(tile.getX() - kitchen.getX()) + Math.abs(tile.getY() - kitchen.getY());
         this.coordinate = tile;
     }
 
-    public int getHValue() {
+    void calculateValues(AdvancedCoordinate currentPosition){
+        if (fValue == null){
+            this.gValue = currentPosition.getgValue() + 10;
+            fValue = gValue + hValue;
+        }
+    }
+
+    boolean checkBetterPath(AdvancedCoordinate currentPosition){
+        int gCost = currentPosition.getgValue() + 10;
+        if (gCost < getgValue()) {
+            setgValue(currentPosition.getgValue() + 10);
+            fValue = gValue + hValue;
+            addParent(currentPosition);
+            return true;
+        }
+        return false;
+    }
+
+    int getHValue() {
         return this.hValue;
     }
 
-    public int getX(){
+    int getgValue(){
+        return this.gValue;
+    }
+
+    int getfValue(){
+        return this.fValue;
+    }
+
+    AdvancedCoordinate getParent(){
+        return this.parent;
+    }
+
+    int getX(){
         return this.coordinate.getX();
     }
 
-    public int getY(){
+    int getY(){
         return this.coordinate.getY();
     }
 
-    public Coordinate getCoordinate(){
+    Coordinate getCoordinate(){
         return this.coordinate;
+    }
+
+    void setgValue(int gValue){
+        this.gValue = gValue;
+    }
+
+    void addParent(AdvancedCoordinate parent) {
+        this.parent = parent;
     }
 
     @Override
     public String toString() {
-        return this.coordinate + " H: " + this.getHValue();
+        if (fValue!=null) {
+            return this.coordinate.toString() + " H: " + this.getHValue() + " F: " + this.getfValue();
+        } else {
+            return this.coordinate.toString() + " H: " + this.hValue;
+        }
     }
 }
